@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Ventas Mercadona - Spark SQL + PostgreSQL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f5;
+            color: #222;
+            margin: 0;
+            padding: 25px;
+        }
+        .contenedor {
+            max-width: 950px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 25px 30px;
+            border-radius: 6px;
+            border: 1px solid #dcdcdc;
+        }
+        h1 {
+            color: #007a33;
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        .subtitulo {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #007a33;
+        }
+        .filtros {
+            background-color: #eef5f0;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #c8dfd0;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .filtros label {
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        .filtros select {
+            padding: 7px 12px;
+            font-size: 14px;
+            border: 1px solid #999;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .tarjetas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .tarjeta {
+            border: 1px solid #d0d7de;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #fafafa;
+        }
+        .tarjeta h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #555;
+            text-transform: uppercase;
+        }
+        .tarjeta .valor-principal {
+            font-size: 22px;
+            font-weight: bold;
+            color: #007a33;
+            margin-bottom: 5px;
+        }
+        .tarjeta .detalle {
+            font-size: 13px;
+            color: #444;
+        }
+        h2 {
+            font-size: 17px;
+            color: #222;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #007a33;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr.seleccionada {
+            background-color: #d8f3dc !important;
+            font-weight: bold;
+        }
+        .nota-pie {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+<div class="contenedor">
+    <h1>Consulta de Ventas y Stock - Mercadona</h1>
+    <div class="subtitulo">
+        Datos procesados con <strong>Apache Spark SQL</strong> (50.000 ventas) y consultados desde <strong>PostgreSQL</strong> (<code>mercadona_bi</code>)
+    </div>
+
+    <div class="filtros">
+        <div>
+            <label for="selectVentana">Intervalo de tiempo:</label>
+            <select id="selectVentana" onchange="cambiarVentana()">
+                <option value="1_HORA">Tramos de 1 Hora</option>
+                <option value="30_MIN">Tramos de 30 Minutos</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="selectFranja">Tramo horario a consultar:</label>
+            <select id="selectFranja" onchange="actualizarVista()"></select>
+        </div>
+    </div>
+
+    <div class="tarjetas">
+        <div class="tarjeta">
+            <h3 id="tituloMedia">Venta Media (Por 1 Hora)</h3>
+            <div class="valor-principal" id="valMedia">0,00 €</div>
+            <div class="detalle">Media calculada entre todos los tramos del día</div>
+        </div>
+
+        <div class="tarjeta">
+            <h3 id="tituloRecaudacion">Recaudación en el tramo</h3>
+            <div class="valor-principal" id="valRecaudacion">0,00 €</div>
+            <div class="detalle" id="valNumVentas">0 líneas de ticket registradas</div>
+        </div>
+
+        <div class="tarjeta">
+            <h3 id="tituloTopProd">Producto más vendido en el tramo</h3>
+            <div class="valor-principal" id="valProdNombre" style="font-size: 17px;">-</div>
+            <div class="detalle" id="valProdDetalle">0 unidades vendidas (0,00 €)</div>
+        </div>
+    </div>
+
+    <h2 id="tituloTabla">Desglose completo del día (haz clic en cualquier fila para seleccionarla)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Franja Horaria</th>
+                <th>Nº Ventas</th>
+                <th>Recaudación Tramo (€)</th>
+                <th>Venta Media Día (€)</th>
+                <th>Producto Más Vendido</th>
+                <th>Unidades</th>
+                <th>Importe Producto (€)</th>
+            </tr>
+        </thead>
+        <tbody id="tablaCuerpo"></tbody>
+    </table>
+
+    <div class="nota-pie">
+        TPI 2 - Ampliación de Bases de Datos · Fernando Martín González
+    </div>
+</div>
+
+<script>
+    const DATOS = [
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "09:00",
+    "numero_ventas": 2265,
+    "recaudacion_euros": 10394.8,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 636,
+    "euros_producto": 604.2
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "10:00",
+    "numero_ventas": 3557,
+    "recaudacion_euros": 15966.65,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 1117,
+    "euros_producto": 1061.15
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "11:00",
+    "numero_ventas": 5248,
+    "recaudacion_euros": 23788.45,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 1570,
+    "euros_producto": 1491.5
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "12:00",
+    "numero_ventas": 6317,
+    "recaudacion_euros": 33530.3,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 1797,
+    "euros_producto": 6469.2
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "13:00",
+    "numero_ventas": 6070,
+    "recaudacion_euros": 31854.95,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 1651,
+    "euros_producto": 5943.6
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "14:00",
+    "numero_ventas": 3163,
+    "recaudacion_euros": 17084.25,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 910,
+    "euros_producto": 3276.0
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "15:00",
+    "numero_ventas": 2145,
+    "recaudacion_euros": 11218.15,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_02",
+    "nombre_producto": "Guacamole Hacendado 200g",
+    "unidades_totales": 557,
+    "euros_producto": 974.75
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "16:00",
+    "numero_ventas": 2599,
+    "recaudacion_euros": 12818.0,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 567,
+    "euros_producto": 1644.3
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "17:00",
+    "numero_ventas": 4434,
+    "recaudacion_euros": 21146.5,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 954,
+    "euros_producto": 2766.6
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "18:00",
+    "numero_ventas": 6313,
+    "recaudacion_euros": 30228.9,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 1465,
+    "euros_producto": 4248.5
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "19:00",
+    "numero_ventas": 5265,
+    "recaudacion_euros": 25156.9,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 1156,
+    "euros_producto": 3352.4
+  },
+  {
+    "tipo_ventana": "1_HORA",
+    "franja_horaria": "20:00",
+    "numero_ventas": 2624,
+    "recaudacion_euros": 12620.5,
+    "media_global_euros": 20484.03,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 601,
+    "euros_producto": 1742.9
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "09:00",
+    "numero_ventas": 1126,
+    "recaudacion_euros": 5385.25,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_06",
+    "nombre_producto": "Huevos Camperos Docena",
+    "unidades_totales": 307,
+    "euros_producto": 813.55
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "09:30",
+    "numero_ventas": 1139,
+    "recaudacion_euros": 5009.55,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 355,
+    "euros_producto": 337.25
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "10:00",
+    "numero_ventas": 1733,
+    "recaudacion_euros": 7670.5,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 546,
+    "euros_producto": 518.7
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "10:30",
+    "numero_ventas": 1824,
+    "recaudacion_euros": 8296.15,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 571,
+    "euros_producto": 542.45
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "11:00",
+    "numero_ventas": 2635,
+    "recaudacion_euros": 11953.55,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 785,
+    "euros_producto": 745.75
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "11:30",
+    "numero_ventas": 2613,
+    "recaudacion_euros": 11834.9,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_01",
+    "nombre_producto": "Leche Entera Hacendado 1L",
+    "unidades_totales": 785,
+    "euros_producto": 745.75
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "12:00",
+    "numero_ventas": 3196,
+    "recaudacion_euros": 16831.2,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 924,
+    "euros_producto": 3326.4
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "12:30",
+    "numero_ventas": 3121,
+    "recaudacion_euros": 16699.1,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 873,
+    "euros_producto": 3142.8
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "13:00",
+    "numero_ventas": 3099,
+    "recaudacion_euros": 16213.35,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 853,
+    "euros_producto": 3070.8
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "13:30",
+    "numero_ventas": 2971,
+    "recaudacion_euros": 15641.6,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 798,
+    "euros_producto": 2872.8
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "14:00",
+    "numero_ventas": 1556,
+    "recaudacion_euros": 8398.7,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 433,
+    "euros_producto": 1558.8
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "14:30",
+    "numero_ventas": 1607,
+    "recaudacion_euros": 8685.55,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 477,
+    "euros_producto": 1717.2
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "15:00",
+    "numero_ventas": 1091,
+    "recaudacion_euros": 5637.25,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_02",
+    "nombre_producto": "Guacamole Hacendado 200g",
+    "unidades_totales": 292,
+    "euros_producto": 511.0
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "15:30",
+    "numero_ventas": 1054,
+    "recaudacion_euros": 5580.9,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_05",
+    "nombre_producto": "Cerveza Steinburg Pack 12",
+    "unidades_totales": 288,
+    "euros_producto": 1036.8
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "16:00",
+    "numero_ventas": 1328,
+    "recaudacion_euros": 6359.0,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 274,
+    "euros_producto": 794.6
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "16:30",
+    "numero_ventas": 1271,
+    "recaudacion_euros": 6459.0,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 293,
+    "euros_producto": 849.7
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "17:00",
+    "numero_ventas": 2227,
+    "recaudacion_euros": 10730.7,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 453,
+    "euros_producto": 1313.7
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "17:30",
+    "numero_ventas": 2207,
+    "recaudacion_euros": 10415.8,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 501,
+    "euros_producto": 1452.9
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "18:00",
+    "numero_ventas": 3122,
+    "recaudacion_euros": 15186.3,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 726,
+    "euros_producto": 2105.4
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "18:30",
+    "numero_ventas": 3191,
+    "recaudacion_euros": 15042.6,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 739,
+    "euros_producto": 2143.1
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "19:00",
+    "numero_ventas": 2631,
+    "recaudacion_euros": 12830.45,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 556,
+    "euros_producto": 1612.4
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "19:30",
+    "numero_ventas": 2634,
+    "recaudacion_euros": 12326.45,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 600,
+    "euros_producto": 1740.0
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "20:00",
+    "numero_ventas": 1289,
+    "recaudacion_euros": 6134.9,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_10",
+    "nombre_producto": "Pizza Jamon y Queso Hacendado",
+    "unidades_totales": 285,
+    "euros_producto": 826.5
+  },
+  {
+    "tipo_ventana": "30_MIN",
+    "franja_horaria": "20:30",
+    "numero_ventas": 1335,
+    "recaudacion_euros": 6485.6,
+    "media_global_euros": 10242.01,
+    "id_producto": "PROD_15",
+    "nombre_producto": "Patatas Fritas Con Sal 150g",
+    "unidades_totales": 324,
+    "euros_producto": 356.4
+  }
+];
+
+    function formatearEuros(numero) {
+        return numero.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    function cambiarVentana() {
+        const ventana = document.getElementById('selectVentana').value;
+        const selectFranja = document.getElementById('selectFranja');
+        selectFranja.innerHTML = '';
+
+        const filtrados = DATOS.filter(d => d.tipo_ventana === ventana);
+        filtrados.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.franja_horaria;
+            opt.textContent = item.franja_horaria + ' h';
+            selectFranja.appendChild(opt);
+        });
+
+        // Por defecto seleccionamos las 12:00 (hora punta)
+        if (filtrados.some(d => d.franja_horaria === '12:00')) {
+            selectFranja.value = '12:00';
+        }
+
+        actualizarVista();
+    }
+
+    function seleccionarFila(franja) {
+        document.getElementById('selectFranja').value = franja;
+        actualizarVista();
+    }
+
+    function actualizarVista() {
+        const ventana = document.getElementById('selectVentana').value;
+        const franjaElegida = document.getElementById('selectFranja').value;
+        const etiquetaVentana = (ventana === '1_HORA') ? '1 Hora' : '30 Minutos';
+
+        const filtrados = DATOS.filter(d => d.tipo_ventana === ventana);
+        const actual = filtrados.find(d => d.franja_horaria === franjaElegida) || filtrados[0];
+
+        if (!actual) return;
+
+        document.getElementById('tituloMedia').textContent = 'Venta Media (Por ' + etiquetaVentana + ')';
+        document.getElementById('valMedia').textContent = formatearEuros(actual.media_global_euros);
+
+        document.getElementById('tituloRecaudacion').textContent = 'Recaudación Tramo (' + actual.franja_horaria + ' h)';
+        document.getElementById('valRecaudacion').textContent = formatearEuros(actual.recaudacion_euros);
+        document.getElementById('valNumVentas').textContent = actual.numero_ventas.toLocaleString('es-ES') + ' ventas en caja';
+
+        document.getElementById('tituloTopProd').textContent = 'Más vendido (' + actual.franja_horaria + ' h)';
+        document.getElementById('valProdNombre').textContent = actual.nombre_producto;
+        document.getElementById('valProdDetalle').textContent =
+            actual.unidades_totales.toLocaleString('es-ES') + ' unidades (' + formatearEuros(actual.euros_producto) + ')';
+
+        const tbody = document.getElementById('tablaCuerpo');
+        tbody.innerHTML = '';
+
+        filtrados.forEach(fila => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            if (fila.franja_horaria === franjaElegida) {
+                tr.className = 'seleccionada';
+            }
+            tr.onclick = () => seleccionarFila(fila.franja_horaria);
+
+            tr.innerHTML = `
+                <td>${fila.franja_horaria} h</td>
+                <td>${fila.numero_ventas.toLocaleString('es-ES')}</td>
+                <td>${formatearEuros(fila.recaudacion_euros)}</td>
+                <td>${formatearEuros(fila.media_global_euros)}</td>
+                <td>${fila.nombre_producto} (<code>${fila.id_producto}</code>)</td>
+                <td>${fila.unidades_totales.toLocaleString('es-ES')} uds</td>
+                <td>${formatearEuros(fila.euros_producto)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    cambiarVentana();
+</script>
+
+</body>
+</html>

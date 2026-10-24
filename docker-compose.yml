@@ -1,0 +1,49 @@
+services:
+  mercadona_db:
+    image: postgres:16-alpine
+    container_name: mercadona_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mercadona_bi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata_mercadona:/var/lib/postgresql/data
+    networks:
+      - mercadona_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mercadona_bi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mercadona_spark:
+    image: apache/spark:3.5.3-python3
+    container_name: mercadona_spark
+    restart: unless-stopped
+    user: root
+    working_dir: /app
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+      - ./jars:/app/jars
+      - ./output:/app/output
+    ports:
+      - "4040:4040"
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      mercadona_db:
+        condition: service_healthy
+    networks:
+      - mercadona_net
+
+volumes:
+  pgdata_mercadona:
+    driver: local
+
+networks:
+  mercadona_net:
+    driver: bridge
