@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<!-- ==========================================================================
+     TPI 3 - Ampliación de Bases de Datos (Tema 6)
+     Archivo: java_app/src/main/resources/hibernate.cfg.xml
+     Propósito: Configuración de conexión de Hibernate hacia PostgreSQL.
+     ========================================================================== -->
+<hibernate-configuration>
+    <session-factory>
+        <!-- Conexión JDBC subyacente hacia el contenedor mercadona_postgres -->
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://mercadona_postgres:5432/mercadona_bi</property>
+        <property name="hibernate.connection.username">postgres</property>
+        <property name="hibernate.connection.password">postgres</property>
+
+        <!-- Dialecto SQL de PostgreSQL y visualización del SQL generado -->
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQL10Dialect</property>
+        <property name="hibernate.show_sql">true</property>
+        <property name="hibernate.format_sql">false</property>
+
+        <!-- Clase Java mapeada a la tabla productos_catalogo -->
+        <mapping class="mercadona.ProductoCatalogo"/>
+    </session-factory>
+</hibernate-configuration>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mercadona TPI 3 - Arquitectura de 3 Niveles, JDBC, ODBC y Hibernate</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f5;
+            color: #222;
+            margin: 0;
+            padding: 20px;
+        }
+        .contenedor {
+            max-width: 980px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 22px 28px;
+            border-radius: 8px;
+            border-top: 6px solid #00754a;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: #00754a;
+            font-size: 22px;
+            margin: 0 0 6px 0;
+        }
+        .subtitulo {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+        h2 {
+            color: #082B66;
+            font-size: 16px;
+            margin-top: 22px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 4px;
+        }
+        .etiqueta {
+            display: inline-block;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        .etiqueta-odbc { background: #e0f2fe; color: #0369a1; }
+        .etiqueta-jdbc { background: #fef3c7; color: #b45309; }
+        .etiqueta-orm  { background: #dcfce7; color: #15803d; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+        th {
+            background: #00754a;
+            color: #fff;
+            text-align: left;
+            padding: 7px 9px;
+        }
+        td {
+            padding: 6px 9px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        tr:nth-child(even) { background: #f9fafb; }
+        .confidencial { color: #b91c1c; background: #fef2f2; }
+        .beneficio { color: #00754a; background: #ecfdf5; }
+    </style>
+</head>
+<body>
+<div class="contenedor">
+    <h1>Mercadona Sevilla — Arquitectura de Tres Niveles (TPI 3)</h1>
+    <div class="subtitulo">
+        Demostración del <b>Nivel Externo</b> (vistas diferenciadas por rol) y actualizaciones mediante <b>ODBC, JDBC y ORM Hibernate</b> sobre PostgreSQL (<code>mercadona_bi</code>).
+    </div>
+
+    <h2>1. Vista Nivel Externo: Personal de Tienda (<code>vista_personal_tienda</code>)
+        <span class="etiqueta etiqueta-odbc">Consultada vía ODBC · Rol: empleado_tienda (Coste oculto)</span>
+        <span class="etiqueta etiqueta-orm">Stock PROD_05 actualizado a 370 por Hibernate</span>
+    </h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Franja</th>
+                <th>ID</th>
+                <th>Producto Estrella</th>
+                <th>Categoría</th>
+                <th>Precio Venta</th>
+                <th>Vendidas (1h)</th>
+                <th>Stock Tienda</th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><b>09:00</b></td>
+            <td>PROD_01</td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>Lácteos</td>
+            <td>0.95 €</td>
+            <td>636</td>
+            <td><b>450 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>10:00</b></td>
+            <td>PROD_01</td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>Lácteos</td>
+            <td>0.95 €</td>
+            <td>1117</td>
+            <td><b>450 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>11:00</b></td>
+            <td>PROD_01</td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>Lácteos</td>
+            <td>0.95 €</td>
+            <td>1570</td>
+            <td><b>450 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>12:00</b></td>
+            <td>PROD_05</td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>Bebidas</td>
+            <td>3.60 €</td>
+            <td>1797</td>
+            <td><b>370 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>13:00</b></td>
+            <td>PROD_05</td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>Bebidas</td>
+            <td>3.60 €</td>
+            <td>1651</td>
+            <td><b>370 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>14:00</b></td>
+            <td>PROD_05</td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>Bebidas</td>
+            <td>3.60 €</td>
+            <td>910</td>
+            <td><b>370 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>15:00</b></td>
+            <td>PROD_02</td>
+            <td>Guacamole Hacendado 200g</td>
+            <td>Refrigerados</td>
+            <td>1.75 €</td>
+            <td>557</td>
+            <td><b>180 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>16:00</b></td>
+            <td>PROD_10</td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>Platos Prep.</td>
+            <td>2.90 €</td>
+            <td>567</td>
+            <td><b>150 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>17:00</b></td>
+            <td>PROD_10</td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>Platos Prep.</td>
+            <td>2.90 €</td>
+            <td>954</td>
+            <td><b>150 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>18:00</b></td>
+            <td>PROD_10</td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>Platos Prep.</td>
+            <td>2.90 €</td>
+            <td>1465</td>
+            <td><b>150 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>19:00</b></td>
+            <td>PROD_10</td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>Platos Prep.</td>
+            <td>2.90 €</td>
+            <td>1156</td>
+            <td><b>150 uds</b></td>
+        </tr>
+        <tr>
+            <td><b>20:00</b></td>
+            <td>PROD_10</td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>Platos Prep.</td>
+            <td>2.90 €</td>
+            <td>601</td>
+            <td><b>150 uds</b></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Vista Nivel Externo: Dirección Financiera (<code>vista_direccion_mercadona</code>)
+        <span class="etiqueta etiqueta-jdbc">Consultada vía JDBC · Incluye Coste Proveedor y Beneficio Neto</span>
+    </h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Franja</th>
+                <th>Producto Estrella</th>
+                <th>Unidades</th>
+                <th>Precio Venta</th>
+                <th>Coste Prov. (Confidencial)</th>
+                <th>Margen / Ud.</th>
+                <th>Beneficio Neto (1h)</th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><b>09:00</b></td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>636</td>
+            <td>0.95 €</td>
+            <td class="confidencial">0.62 €</td>
+            <td class="confidencial">0.33 €</td>
+            <td class="beneficio"><b>209.88 €</b></td>
+        </tr>
+        <tr>
+            <td><b>10:00</b></td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>1117</td>
+            <td>0.95 €</td>
+            <td class="confidencial">0.62 €</td>
+            <td class="confidencial">0.33 €</td>
+            <td class="beneficio"><b>368.61 €</b></td>
+        </tr>
+        <tr>
+            <td><b>11:00</b></td>
+            <td>Leche Entera Hacendado 1L</td>
+            <td>1570</td>
+            <td>0.95 €</td>
+            <td class="confidencial">0.62 €</td>
+            <td class="confidencial">0.33 €</td>
+            <td class="beneficio"><b>518.10 €</b></td>
+        </tr>
+        <tr>
+            <td><b>12:00</b></td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>1797</td>
+            <td>3.60 €</td>
+            <td class="confidencial">2.10 €</td>
+            <td class="confidencial">1.50 €</td>
+            <td class="beneficio"><b>2695.50 €</b></td>
+        </tr>
+        <tr>
+            <td><b>13:00</b></td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>1651</td>
+            <td>3.60 €</td>
+            <td class="confidencial">2.10 €</td>
+            <td class="confidencial">1.50 €</td>
+            <td class="beneficio"><b>2476.50 €</b></td>
+        </tr>
+        <tr>
+            <td><b>14:00</b></td>
+            <td>Cerveza Steinburg Pack 12</td>
+            <td>910</td>
+            <td>3.60 €</td>
+            <td class="confidencial">2.10 €</td>
+            <td class="confidencial">1.50 €</td>
+            <td class="beneficio"><b>1365.00 €</b></td>
+        </tr>
+        <tr>
+            <td><b>15:00</b></td>
+            <td>Guacamole Hacendado 200g</td>
+            <td>557</td>
+            <td>1.75 €</td>
+            <td class="confidencial">1.05 €</td>
+            <td class="confidencial">0.70 €</td>
+            <td class="beneficio"><b>389.90 €</b></td>
+        </tr>
+        <tr>
+            <td><b>16:00</b></td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>567</td>
+            <td>2.90 €</td>
+            <td class="confidencial">1.65 €</td>
+            <td class="confidencial">1.25 €</td>
+            <td class="beneficio"><b>708.75 €</b></td>
+        </tr>
+        <tr>
+            <td><b>17:00</b></td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>954</td>
+            <td>2.90 €</td>
+            <td class="confidencial">1.65 €</td>
+            <td class="confidencial">1.25 €</td>
+            <td class="beneficio"><b>1192.50 €</b></td>
+        </tr>
+        <tr>
+            <td><b>18:00</b></td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>1465</td>
+            <td>2.90 €</td>
+            <td class="confidencial">1.65 €</td>
+            <td class="confidencial">1.25 €</td>
+            <td class="beneficio"><b>1831.25 €</b></td>
+        </tr>
+        <tr>
+            <td><b>19:00</b></td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>1156</td>
+            <td>2.90 €</td>
+            <td class="confidencial">1.65 €</td>
+            <td class="confidencial">1.25 €</td>
+            <td class="beneficio"><b>1445.00 €</b></td>
+        </tr>
+        <tr>
+            <td><b>20:00</b></td>
+            <td>Pizza Jamon y Queso Hacendado</td>
+            <td>601</td>
+            <td>2.90 €</td>
+            <td class="confidencial">1.65 €</td>
+            <td class="confidencial">1.25 €</td>
+            <td class="beneficio"><b>751.25 €</b></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Pedidos de Reposición Registrados (<code>reposiciones_stock</code>)
+        <span class="etiqueta etiqueta-jdbc">Último pedido (#5 Triana) insertado con Transacción ACID en JDBC</span>
+    </h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Pedido</th>
+                <th>Tienda (Sevilla)</th>
+                <th>Producto</th>
+                <th>Unidades Repuestas</th>
+                <th>Franja</th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>#1</td>
+            <td>MERC_SEV_NERVION (Nervión)</td>
+            <td>PROD_01 - Leche Entera Hacendado 1L</td>
+            <td><b>+120 uds</b></td>
+            <td>09:00</td>
+        </tr>
+        <tr>
+            <td>#2</td>
+            <td>MERC_SEV_MACARENA (Macarena)</td>
+            <td>PROD_05 - Cerveza Steinburg Pack 12</td>
+            <td><b>+200 uds</b></td>
+            <td>12:00</td>
+        </tr>
+        <tr>
+            <td>#3</td>
+            <td>MERC_SEV_TRIANA (Triana)</td>
+            <td>PROD_02 - Guacamole Hacendado 200g</td>
+            <td><b>+80 uds</b></td>
+            <td>15:00</td>
+        </tr>
+        <tr>
+            <td>#4</td>
+            <td>MERC_SEV_BAMI (Bami)</td>
+            <td>PROD_10 - Pizza Jamon y Queso Hacendado</td>
+            <td><b>+150 uds</b></td>
+            <td>18:00</td>
+        </tr>
+        <tr>
+            <td>#5</td>
+            <td>MERC_SEV_TRIANA (Triana)</td>
+            <td>PROD_05 - Cerveza Steinburg Pack 12</td>
+            <td><b>+100 uds</b></td>
+            <td>12:00</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
