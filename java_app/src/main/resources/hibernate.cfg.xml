@@ -2,11 +2,6 @@
 <!DOCTYPE hibernate-configuration PUBLIC
         "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
         "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
-<!-- ==========================================================================
-     TPI 3 - Ampliación de Bases de Datos (Tema 6)
-     Archivo: java_app/src/main/resources/hibernate.cfg.xml
-     Propósito: Configuración de conexión de Hibernate hacia PostgreSQL.
-     ========================================================================== -->
 <hibernate-configuration>
     <session-factory>
         <!-- Conexión JDBC subyacente hacia el contenedor mercadona_postgres -->

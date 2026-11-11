@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ==========================================================================
-     TPI 3 - Ampliación de Bases de Datos (Tema 6)
-     Archivo: java_app/pom.xml
-     Propósito: Configuración mínima de Maven con el driver JDBC de PostgreSQL
-                y el ORM Hibernate para acceder a la base de datos mercadona_bi.
-     ========================================================================== -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">

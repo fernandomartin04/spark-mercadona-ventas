@@ -14,15 +14,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * TPI 3 - Ampliación de Bases de Datos (Tema 6)
- * Archivo: java_app/src/main/java/mercadona/AppMercadona.java
- * Propósito: Demostrar en una misma aplicación sencilla:
- *   1. Acceso mediante JDBC con buenas prácticas (try-with-resources,
- *      PreparedStatement parametrizado contra SQL Injection y Transacción ACID).
- *   2. Acceso mediante ORM Hibernate trabajando directamente con objetos Java
- *      (ProductoCatalogo) y consultas HQL parametrizadas.
- */
 public class AppMercadona {
 
     private static final String URL_JDBC = "jdbc:postgresql://mercadona_postgres:5432/mercadona_bi";

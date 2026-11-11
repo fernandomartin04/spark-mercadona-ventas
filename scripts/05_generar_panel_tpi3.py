@@ -1,11 +1,3 @@
-# ============================================================================
-# TPI 3 - Ampliación de Bases de Datos (Tema 6)
-# Archivo: scripts/05_generar_panel_tpi3.py
-# Propósito: Generar una página HTML muy sencilla (panel_arquitectura_tpi3.html)
-#            que muestra visualmente las dos vistas del Nivel Externo
-#            (Personal de Tienda vs. Dirección) y los cambios de JDBC/Hibernate.
-# ============================================================================
-
 import csv
 import io
 import subprocess

@@ -1,10 +1,3 @@
--- ============================================================================
--- TPI 3 - Ampliación de Bases de Datos (Tema 6)
--- Arquitectura de Tres Niveles (ANSI/SPARC) e Independencia de Datos
--- Proyecto Mercadona (Sevilla) - Continuación sobre mercadona_bi
--- ============================================================================
-
--- Limpieza previa por si re-ejecutamos el script
 DROP VIEW IF EXISTS vista_personal_tienda;
 DROP VIEW IF EXISTS vista_direccion_mercadona;
 DROP TABLE IF EXISTS reposiciones_stock;

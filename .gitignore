@@ -5,3 +5,5 @@ imgs/Captura*
 __pycache__/
 *.pyc
 output/
+
+java_app/target/

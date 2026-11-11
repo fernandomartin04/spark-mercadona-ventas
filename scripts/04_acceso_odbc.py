@@ -1,11 +1,3 @@
-# ============================================================================
-# TPI 3 - Ampliación de Bases de Datos (Tema 6)
-# Archivo: scripts/04_acceso_odbc.py
-# Propósito: Demostrar el acceso mediante la interfaz estándar ODBC (pyodbc)
-#            conectando con el rol restringido 'empleado_tienda' sobre el
-#            Nivel Externo (vista_personal_tienda) y aplicando buenas prácticas.
-# ============================================================================
-
 import pyodbc
 
 # 1. Cadena de conexión estándar ODBC usando el driver oficial PostgreSQL Unicode

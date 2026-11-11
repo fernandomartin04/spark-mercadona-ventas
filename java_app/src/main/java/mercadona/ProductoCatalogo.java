@@ -6,12 +6,6 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 
-/**
- * TPI 3 - Ampliación de Bases de Datos (Tema 6)
- * Archivo: java_app/src/main/java/mercadona/ProductoCatalogo.java
- * Propósito: Entidad ORM de Hibernate que mapea la tabla 'productos_catalogo'
- *            de PostgreSQL a un objeto Java normal (sin escribir SQL manual).
- */
 @Entity
 @Table(name = "productos_catalogo")
 public class ProductoCatalogo {
